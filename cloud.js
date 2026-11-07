@@ -59,7 +59,7 @@ window.CoverCloud=(()=>{
   const end=new Uint8Array(22),e=new DataView(end.buffer);e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,centralSize,true);e.setUint32(16,offset,true);
   const url=URL.createObjectURL(new Blob([...locals,...central,end],{type:'application/zip'}));zipCache.set(record.id,url);return url;
  }
- const SIZE_STD={'1:1':'1024x1024','3:4':'1024x1536','4:3':'1536x1024','9:16':'1024x1536','16:9':'1536x1024','5:2':'1536x1024'};
+ const SIZE_STD={'1:1':'1024x1024','3:4':'1024x1536','4:3':'1536x1024','9:16':'1024x1792','16:9':'1792x1024','5:2':'1536x640'};
  function directSize(ratio){
   const cfg=window.COVER_DIRECT||{};
   if(cfg.sizeMode==='none')return null;

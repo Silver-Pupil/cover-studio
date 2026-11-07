@@ -88,16 +88,47 @@ window.CoverCloud=(()=>{
    reader.readAsDataURL(blob);
   }));
  }
+ function mountModelPicker(){
+  const cfg=window.COVER_DIRECT||{};
+  const models=Array.isArray(cfg.models)&&cfg.models.length?cfg.models.slice():[cfg.model].filter(Boolean);
+  const anchor=document.querySelector('.model-line');
+  if(models.length<2||!anchor||document.getElementById('cover-model-picker'))return;
+  const wrap=document.createElement('div');
+  wrap.id='cover-model-picker';
+  wrap.style.cssText='display:flex;flex-direction:column;gap:5px;padding:10px 16px 4px;border-top:1px solid rgba(120,130,145,.14)';
+  const label=document.createElement('label');
+  label.className='field-label';label.setAttribute('for','cover-model-select');label.textContent='模型';
+  const select=document.createElement('select');
+  select.id='cover-model-select';select.className='size-select';
+  for(const name of models){const option=document.createElement('option');option.value=name;option.textContent=name;select.appendChild(option);}
+  const saved=localStorage.getItem('cover-studio-model');
+  select.value=saved&&models.indexOf(saved)>=0?saved:(models.indexOf(cfg.model)>=0?cfg.model:models[0]);
+  wrap.append(label,select);
+  anchor.parentNode.insertBefore(wrap,anchor);
+  const sync=()=>{
+   const value=select.value;
+   try{localStorage.setItem('cover-studio-model',value);}catch(error){}
+   window.CoverModels={generate:value,split:value};
+   const name=document.getElementById('model-name');
+   if(name)name.textContent=value;
+  };
+  select.addEventListener('change',sync);
+  sync();
+ }
+ function currentModel(fallback){
+  return (window.CoverModels&&window.CoverModels.generate)||(window.COVER_DIRECT&&window.COVER_DIRECT.model)||fallback;
+ }
  async function directImages(payload){
   const cfg=window.COVER_DIRECT||{};
   const base=String(cfg.base||'').replace(/\/+$/,'');
   const key=String(cfg.key||payload.key||'').trim();
   if(!base)throw new Error('未配置接口地址。');
   if(!key)throw new Error('请先填写 API Key。');
+  const model=currentModel(cfg.model);
   let response;
   if(payload.kind==='split'){
    const form=new FormData();
-   form.set('model',cfg.splitModel||cfg.model);
+   form.set('model',cfg.splitModel||model);
    form.set('prompt',payload.prompt);
    form.set('n','1');
    const blob=dataURLToBlob(payload.image);
@@ -105,7 +136,7 @@ window.CoverCloud=(()=>{
    form.set('image',blob,`input.${ext}`);
    response=await fetch(`${base}/images/edits`,{method:'POST',headers:{Authorization:`Bearer ${key}`},body:form});
   }else{
-   const fields={model:cfg.model,prompt:payload.prompt,n:1};
+   const fields={model,prompt:payload.prompt,n:1};
    const size=directSize(payload.ratio);if(size)fields.size=size;
    if(cfg.body&&typeof cfg.body==='object')Object.assign(fields,cfg.body);
    response=await fetch(`${base}/images/generations`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify(fields)});
@@ -153,5 +184,6 @@ window.CoverCloud=(()=>{
   let storage_warning;try{await write(record);}catch(error){storage_warning='图片已完成，但素材库保存失败，请及时下载当前作品。';}
   return {...record,zip_url:payload.kind==='split'?zipURL(record):null,storage_warning};
  }
+ ready.then(ok=>{if(ok&&window.COVER_DIRECT)mountModelPicker();}).catch(()=>{});
  return {ready,submit,list,change};
 })();
